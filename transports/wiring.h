@@ -429,7 +429,11 @@ public:
     __end();
     digitalWrite(10, LOW);
     memset(s, 0xff, n);
+#ifdef ARDUINO_ARCH_SAM
+    SPI.transfer((byte*)s, n);
+#else
     SPI.transfer((char*)s, n);
+#endif
     digitalWrite(10, HIGH);
     resume();
   }
