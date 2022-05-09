@@ -1,0 +1,13 @@
+{
+  "name": "gd2-lib",
+  "version": "1.3.4",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/jamesbowman/gd2-lib.git"
+  },
+  "build": {
+	  "srcDir": ".",
+	  "srcFilter": "+<*> -<**/pc>"
+  }
+}
