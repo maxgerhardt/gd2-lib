@@ -14,6 +14,10 @@
 // #define VERBOSE       1
 #include <GD2.h>
 
+#if defined(__DUE__)
+ASPI_t ASPI;
+#endif
+
 #ifdef DUMPDEV
 #include <assert.h>
 #include "transports/dump.h"
