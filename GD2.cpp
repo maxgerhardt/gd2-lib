@@ -44,7 +44,17 @@ byte ft8xx_model;
 #include "transports/tr-spidriver.h"
 #endif
 
-////////////////////////////////////////////////////////////////////////
+#if defined(__DUE__)
+#define SPI ASPI
+ASPI_t ASPI;
+#endif
+#if defined(ARDUINO_STM32L4_BLACKICE)
+// BlackIce Board uses SPI1 on the Arduino header.
+#define SPI SPI1
+// Board Support:
+//   JSON: http://www.hamnavoe.com/package_millerresearch_mystorm_index.json
+//   Source: https://github.com/millerresearch/arduino-mystorm
+#endif
 
 void xy::set(int _x, int _y)
 {

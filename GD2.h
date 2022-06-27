@@ -129,17 +129,8 @@ public:
     }
   }
 };
-static class ASPI_t ASPI;
-#define SPI ASPI
+extern ASPI_t ASPI;
 
-#endif
-
-#if defined(ARDUINO_STM32L4_BLACKICE)
-// BlackIce Board uses SPI1 on the Arduino header.
-#define SPI SPI1
-// Board Support:
-//   JSON: http://www.hamnavoe.com/package_millerresearch_mystorm_index.json
-//   Source: https://github.com/millerresearch/arduino-mystorm
 #endif
 
 #if SDCARD
