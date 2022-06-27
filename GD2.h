@@ -134,7 +134,6 @@ extern ASPI_t ASPI;
 
 #if defined(__DUE__)
 #define USED_SPI ASPI
-ASPI_t ASPI;
 #elif defined(ARDUINO_STM32L4_BLACKICE)
 // BlackIce Board uses SPI1 on the Arduino header.
 #define USED_SPI SPI1
