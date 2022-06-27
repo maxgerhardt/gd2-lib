@@ -72,7 +72,6 @@
 #endif
 #endif
 
-
 ////////////////////////////////////////////////////////////////////////
 // Decide if we want to compile in SDcard support
 //
@@ -133,6 +132,20 @@ extern ASPI_t ASPI;
 
 #endif
 
+#if defined(__DUE__)
+#define USED_SPI ASPI
+ASPI_t ASPI;
+#elif defined(ARDUINO_STM32L4_BLACKICE)
+// BlackIce Board uses SPI1 on the Arduino header.
+#define USED_SPI SPI1
+// Board Support:
+//   JSON: http://www.hamnavoe.com/package_millerresearch_mystorm_index.json
+//   Source: https://github.com/millerresearch/arduino-mystorm
+#else 
+#define USED_SPI SPI
+#endif
+
+
 #if SDCARD
 
 #if defined(VERBOSE) && (VERBOSE > 0)
@@ -176,11 +189,11 @@ class sdcard {
   }
   void desel() {
     digitalWrite(pin, HIGH);
-    SPI.transfer(0xff); // force DO release
+    USED_SPI.transfer(0xff); // force DO release
   }
   void sd_delay(byte n) {
     while (n--) {
-      SPI.transfer(0xff);
+      USED_SPI.transfer(0xff);
     }
   }
 
@@ -194,19 +207,19 @@ class sdcard {
 #endif
 
     sel();
-    SPI.transfer(0x40 | cmd);
-    SPI.transfer(0xff & (lba >> 24));
-    SPI.transfer(0xff & (lba >> 16));
-    SPI.transfer(0xff & (lba >> 8));
-    SPI.transfer(0xff & (lba));
-    SPI.transfer(crc);
+    USED_SPI.transfer(0x40 | cmd);
+    USED_SPI.transfer(0xff & (lba >> 24));
+    USED_SPI.transfer(0xff & (lba >> 16));
+    USED_SPI.transfer(0xff & (lba >> 8));
+    USED_SPI.transfer(0xff & (lba));
+    USED_SPI.transfer(crc);
   }
 
   byte response() {
     byte r;
-    r = SPI.transfer(0xff);
+    r = USED_SPI.transfer(0xff);
     while (r & 0x80) {
-      r = SPI.transfer(0xff);
+      r = USED_SPI.transfer(0xff);
     }
     return r;
   }
@@ -214,15 +227,15 @@ class sdcard {
   byte R1() {   // read response R1
     byte r = response();
     desel();
-    SPI.transfer(0xff);   // trailing byte
+    USED_SPI.transfer(0xff);   // trailing byte
     return r;
   }
 
   byte sdR3(uint32_t &ocr) {  // read response R3
     byte r = response();
     for (byte i = 4; i; i--)
-      ocr = (ocr << 8) | SPI.transfer(0xff);
-    SPI.transfer(0xff);   // trailing byte
+      ocr = (ocr << 8) | USED_SPI.transfer(0xff);
+    USED_SPI.transfer(0xff);   // trailing byte
 
     desel();
     return r;
@@ -231,8 +244,8 @@ class sdcard {
   byte sdR7() {  // read response R3
     byte r = response();
     for (byte i = 4; i; i--)
-      // Serial.println(SPI.transfer(0xff), HEX);
-      SPI.transfer(0xff);
+      // Serial.println(USED_SPI.transfer(0xff), HEX);
+      USED_SPI.transfer(0xff);
     desel();
 
     return r;
@@ -250,11 +263,11 @@ class sdcard {
 
     pinMode(pin, OUTPUT);
 #if !defined(__DUE__) && !defined(TEENSYDUINO) && !defined(ARDUINO_ARCH_STM32L4)
-    SPI.setClockDivider(SPI_CLOCK_DIV64);
+    USED_SPI.setClockDivider(SPI_CLOCK_DIV64);
 #endif
     desel();
 
-  // for (;;) SPI.transfer(0xff);
+  // for (;;) USED_SPI.transfer(0xff);
     delay(50);      // wait for boot
     sd_delay(10);   // deselected, 80 pulses
 
@@ -264,11 +277,11 @@ class sdcard {
     attempts = 0;
     do {       // reset, enter idle
       cmd(0);
-      while ((r1 = SPI.transfer(0xff)) & 0x80)
+      while ((r1 = USED_SPI.transfer(0xff)) & 0x80)
         if (++attempts == 1000)
           goto finished;
       desel();
-      SPI.transfer(0xff);   // trailing byte
+      USED_SPI.transfer(0xff);   // trailing byte
       REPORT(r1);
     } while (r1 != 1);
     INFO("reset ok\n");
@@ -315,7 +328,7 @@ class sdcard {
     cmd17(0);
     for (int i = 0; i < 512; i++) {
       delay(10);
-      byte b = SPI.transfer(0xff);
+      byte b = USED_SPI.transfer(0xff);
       Serial.print(b, HEX);
       Serial.print(' ');
       if ((i & 15) == 15)
@@ -326,16 +339,16 @@ class sdcard {
 #endif
 
 #if !defined(__DUE__) && !defined(ESP8266) && !defined(ESP32) && !defined(ARDUINO_ARCH_STM32L4) && !defined(ARDUINO_ARCH_STM32)
-    SPI.setClockDivider(SPI_CLOCK_DIV2);
+    USED_SPI.setClockDivider(SPI_CLOCK_DIV2);
     SPSR = (1 << SPI2X);
 #endif
 
 #if defined(ESP8266)
-    SPI.setFrequency(40000000L);
+    USED_SPI.setFrequency(40000000L);
 #elif defined(ESP32)
-    SPI.setFrequency(25000000L);
+    USED_SPI.setFrequency(25000000L);
 #elif defined(ARDUINO_ARCH_STM32)
-    SPI.beginTransaction(SPISettings(18000000, MSBFIRST, SPI_MODE0));
+    USED_SPI.beginTransaction(SPISettings(18000000, MSBFIRST, SPI_MODE0));
 #endif
 
     type_code = rd(0x1be + 0x4);
@@ -388,7 +401,7 @@ class sdcard {
       cmd(17, off & ~511L);
     R1();
     sel();
-    while (SPI.transfer(0xff) != 0xfe)
+    while (USED_SPI.transfer(0xff) != 0xfe)
       ;
   }
   void rdn(byte *d, uint32_t off, uint16_t n) {
@@ -396,11 +409,11 @@ class sdcard {
     uint16_t i;
     uint16_t bo = (off & 511);
     for (i = 0; i < bo; i++)
-      SPI.transfer(0xff);
+      USED_SPI.transfer(0xff);
     for (i = 0; i < n; i++)
-      *d++ = SPI.transfer(0xff);
+      *d++ = USED_SPI.transfer(0xff);
     for (i = 0; i < (514 - bo - n); i++)
-      SPI.transfer(0xff);
+      USED_SPI.transfer(0xff);
     desel();
   }
 
@@ -796,16 +809,16 @@ public:
 #if defined(__DUE__) || defined(TEENSYDUINO) || defined(ESP8266) || defined(ESP32) || 1
 
 #if defined(ARDUINO_ARCH_STM32)
-    SPI.read(dst, 512);
+    USED_SPI.read(dst, 512);
 #elif defined(ESP8266) || defined(ESP32)
-    SPI.transferBytes(NULL, dst, 512);
+    USED_SPI.transferBytes(NULL, dst, 512);
 #else
-    // for (int i = 0; i < 512; i++) *dst++ = SPI.transfer(0xff);
-    memset(dst, 0xff, 512); SPI.transfer(dst, 512);
+    // for (int i = 0; i < 512; i++) *dst++ = USED_SPI.transfer(0xff);
+    memset(dst, 0xff, 512); USED_SPI.transfer(dst, 512);
 #endif
 
-    SPI.transfer(0xff);   // consume CRC
-    SPI.transfer(0xff);
+    USED_SPI.transfer(0xff);   // consume CRC
+    USED_SPI.transfer(0xff);
 #else
     SPDR = 0xff;
     asm volatile("nop"); while (!(SPSR & _BV(SPIF))) ;
@@ -827,7 +840,7 @@ public:
       SPDR = 0xff;
     }
     asm volatile("nop"); while (!(SPSR & _BV(SPIF))) ;
-    SPI.transfer(0xff);
+    USED_SPI.transfer(0xff);
 #endif
     GD.SD.desel();
   }
